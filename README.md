@@ -14,6 +14,7 @@ Components are modeled with the standardized open-source Embedded Systems Interm
 | `derating/space-derating.stanza`      | Derating parameters for spaceflight applications. |
 | `designs/`      | Collection of example designs. |
 | `doc/`      | Documentation. |
+| `models/` | Contains helpers for generating SPICE models for components
 | `modules/`      | Contains generators for subcircuits. (e.g. passive-circuits.stanza contains genreators for circuits like passive filters and voltage dividers) |
 | `tests/`      | Tests and test utilities. |
 | `utils/`      | Utilities for modeling components and creating circuit generators|

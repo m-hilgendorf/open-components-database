@@ -75,6 +75,10 @@ include "components/winbond/stanza.proj"
 include "components/wurth/stanza.proj"
 
 ;====================================
+;======== Modeling Utilities ========
+package ocdb/models/voltage-reference defined-in "models/voltage-reference.stanza"
+
+;====================================
 ;====== Derating parameters ========= 
 ;====================================
 package ocdb/space-derating defined-in "derating/space-derating.stanza"

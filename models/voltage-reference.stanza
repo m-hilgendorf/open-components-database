@@ -1,0 +1,90 @@
+#use-added-syntax(esir)
+defpackage ocdb/models/voltage-reference:
+  import core
+  import collections
+  import esir
+
+;======================================================================================================================
+; Defaults
+;======================================================================================================================
+public defn voltage-reference (
+  v+             :Ref     ; positive terminal of the voltage reference
+  v-             :Ref     ; negative terminal of the voltage reference
+  output-voltage :Double, ; volts
+  ; voltage-reference-current = 100uA
+  ; headroom-voltage = 1V
+  ; load-current = 0A
+  ; slew-rate    = 0.5MV/s
+):
+  voltage-reference(v+, v-, output-voltage, 100.0e-6, 1.0, 0.0, 0.5e6)
+
+public defn voltage-reference (
+  v+                        :Ref     ; positive terminal of the voltage reference
+  v-                        :Ref     ; negative terminal of the voltage reference
+  output-voltage            :Double, ; volts
+  voltage-reference-current :Double, ; amps
+  ; headroom-voltage = 1V
+  ; load-current = 0A
+  ; slew-rate    = 0.5MV/s
+):
+  voltage-reference(v+, v-, output-voltage, voltage-reference-current, 1.0, 0.0, 0.5e6)
+
+public defn voltage-reference (
+  v+                        :Ref     ; positive terminal of the voltage reference
+  v-                        :Ref     ; negative terminal of the voltage reference
+  output-voltage            :Double, ; volts
+  voltage-reference-current :Double, ; amps
+  headroom-voltage          :Double, ; volts 
+  ; load-current = 0A
+  ; slew-rate    = 0.5MV/s
+):
+  voltage-reference(v+, v-, output-voltage, voltage-reference-current, headroom-voltage, 0.0, 0.5e6)
+;======================================================================================================================
+
+public defn voltage-reference (
+  v+                        :Ref     ; positive terminal of the voltage reference
+  v-                        :Ref     ; negative terminal of the voltage reference
+  output-voltage            :Double, ; volts
+  voltage-reference-current :Double, ; amps
+  headroom-voltage          :Double, ; volts 
+  load-current              :Double  ; amps
+  ; slew-rate = 0.5MV/s
+):
+  voltage-reference(v+, v-, output-voltage, voltage-reference-current, headroom-voltage, load-current, 0.5e6)
+
+;======================================================================================================================
+; Implementation
+;======================================================================================================================
+; a single voltage reference. 
+public defn voltage-reference (
+  v+                        :Ref     ; positive terminal of the voltage reference
+  v-                        :Ref     ; negative terminal of the voltage reference
+  output-voltage            :Double, ; volts
+  voltage-reference-current :Double, ; amps
+  headroom-voltage          :Double, ; volts 
+  load-current              :Double  ; amps
+  slew-rate                 :Double  ; volts per second
+):
+  val rs-pct = 99.0  ; these are design parameters that my or may not be known. How do we select their values?
+  val rd-pct = 99.0 
+  val mosfet-drain-voltage = output-voltage + headroom-voltage
+  
+  ; mosfet used as a current source
+  val mosfet-source-resistance = (rs-pct / 100.0) * (headroom-voltage / voltage-reference-current) 
+  val mosfet-drain-resistance  = (rd-pct / 100.0) * (headroom-voltage / voltage-reference-current)
+  val mosfet-threshold-voltage = -1.0 * (headroom-voltage - voltage-reference-current * (mosfet-source-resistance + mosfet-drain-resistance))
+  val mosfet-kp = 2.0 * voltage-reference-current / (-1.0 * mosfet-threshold-voltage - voltage-reference-current * mosfet-source-resistance)
+
+  ; zener diode used as the voltage reference
+  val zener-resistance        = (rs-pct / 100.0) * output-voltage / (voltage-reference-current - load-current)
+  val zener-breakdown-voltage = (1.0 - rs-pct / 100.0) * output-voltage
+  val zener-breakdown-current = (voltage-reference-current - load-current)
+  val zener-capacitance       = (voltage-reference-current - load-current) / slew-rate
+
+  inside pcb-component: 
+    spice: 
+      ".model DZENER RS={zener-resistance} BV={zener-breakdown-voltage} IBV={zener-breakdown-current}" 
+      "[Vdd] mz-drain {v-} {mosfet-drain-voltage}"
+      "[Dz] v+ v- DZENER"
+      "[Cz] v+ v- {zener-capacitance}"
+      "[Mz] mz-drain {v+} {v+} (KP={mosfet-kp} VTO={mosfet-threshold-voltage} RS={mosfet-source-resistance} RD={mosfet-drain-resistance})"
