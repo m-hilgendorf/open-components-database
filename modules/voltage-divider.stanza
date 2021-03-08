@@ -57,9 +57,10 @@ public defn voltage-divider (v-in: [Double, Double, Double],
   val hi-res = get-resistance-values(goal-r-hi, tolerance, current-tolerance)
   val lo-res = get-resistance-values(goal-r-lo, tolerance, current-tolerance)
 
-  label<VoltageDividerSolution|False> return :
+  label<VoltageDividerSolution|False> return:
+    val os = IndentedStream(STANDARD-OUTPUT-STREAM)
     for ratio in determine-and-sort-fitting-resistance-pairs(v-in, v-out, tolerance, hi-res, lo-res) do :
-      println("    - Querying resistors for R1=%_Ω R2=%_Ω" % [high(ratio), low(ratio)])
+      println(os, "- Querying resistors for R1=%_Ω R2=%_Ω" % [high(ratio), low(ratio)])
       val r-his = query-resistors(high(ratio), tolerance)
       val r-los = query-resistors(low(ratio), tolerance)
 
@@ -70,15 +71,15 @@ public defn voltage-divider (v-in: [Double, Double, Double],
         val [vo-min, vo-nom, vo-max] = vo
 
         if (vo-min >= v-out[0]) and (vo-max <= v-out[2]) :
-          println("      Solved: mpn1=%_, mpn2=%_, v-out=(min=%_V, nom=%_V, max=%_V), current=%_A"
+          println(os, "Solved: mpn1=%_, mpn2=%_, v-out=(min=%_V, nom=%_V, max=%_V), current=%_A"
                   % [mpn(r-hi-cmp), mpn(r-lo-cmp), vo-min, vo-nom, vo-max, v-out[1] / low(ratio)])
           return(VoltageDividerSolution(r-hi-cmp, r-lo-cmp, vo))
         else :
-          println("      Ignoring: not a solution when taking into account TCRs.")
+          println(os, "Ignoring: not a solution when taking into account TCRs.")
       else :
-        println("      Ignoring: there must at least 3 resistors of each type")
+        println(os, "Ignoring: there must at least 3 resistors of each type")
 
-    println("   No solution.")
+    println(os, "No solution.")
 
 defn get-resistance-values (goal-r: Double, r-tol: Double, current-tol: Double) -> Tuple<Double> :
   query-available-resistance-values(["min-resistance" => (1. - current-tol) * goal-r,
@@ -150,7 +151,7 @@ defn study-solution (v-in: [Double, Double, Double], r-hi: Resistor, r-lo: Resis
   ; TCR can be + or - here. It's a tolerance, not an absolute change in resistance
   val lo-tolerance = tolerance(r-lo) as MinMaxRange
   val hi-tolerance = tolerance(r-hi) as MinMaxRange
-  println("      Checking solution for existing components with: tol1=%_, tol2=%_" % [hi-tolerance, lo-tolerance])
+  println(IndentedStream(STANDARD-OUTPUT-STREAM), "Checking solution for existing components with: tol1=%_, tol2=%_" % [hi-tolerance, lo-tolerance])
 
   compute-output-voltage-range(v-in,
                                resistance(r-lo),
